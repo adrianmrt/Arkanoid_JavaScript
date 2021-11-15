@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Arkanoid</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            canvas {
+                margin:           0px;
+                padding:          0px;
+                border:           1px solid black;
+                position: absolute;
+                left: 500px;
+                top: 50px;
+            }
+        </style>
+    </head>
+    <body>
+
+
+        <canvas id="lienzo" width="470" height="600" ></canvas>
+
+
+        <img id="fondo" src="hexagon_pattern.png" hidden="true">
+        <img id="latIzq" src= "border_right.png" hidden="true">
+        <img id="latDrcho" src= "border_left.png" hidden="true">
+        <img id="arriba" src="border_top.png" hidden="true">
+        <img id="racket" src="racket.png" hidden="true">
+        <img id="bAzul" src="bloque_azulclaro.png" hidden="true">
+        <img id="bVerde" src="bloque_verde.png" hidden="true">
+        <img id="bRojo" src="bloque_rojo.png" hidden="true">
+        <img id="bAmarillo" src="bloque_amarillo.png" hidden="true">
+        <img id="bMorado" src="bloque_morado.png" hidden="true">
+        <img id="bNaranja" src="bloque_naranja.png" hidden="true">
+        <img id="ball" src="bola.png" hidden="true">
+
+
+
+        <audio id="romper" src="romper.mp3"></audio>
+        <audio id="rebote" src="bounce.mp3"></audio>
+        <audio id="mFondo" src="musica_fondo.mp3"></audio>
+
+        <button class="button" onclick = "reStart()"  style= "margin-left:700px; margin-top: 650px;"> Restart </button>
+
+        <script>
+
+            var contexto = document.getElementById("lienzo").getContext("2d");
+            var lienzo = document.getElementById("lienzo");
+
+            //imagenes
+            var fondo = document.getElementById("fondo");
+            var latIzq = document.getElementById("latIzq");
+            var latDrcho = document.getElementById("latDrcho");
+            var arriba = document.getElementById("arriba");
+            var raquetaImg = document.getElementById("racket");
+            var bAzul = document.getElementById("bAzul");
+            var bMorado = document.getElementById("bMorado");
+            var bVerde = document.getElementById("bVerde");
+            var bRojo = document.getElementById("bRojo");
+            var bAmarillo = document.getElementById("bAmarillo");
+            var bNaranja = document.getElementById("bNaranja");
+            var bolaImg = document.getElementById("ball");
+            var romper = document.getElementById("romper");
+            var rebote = document.getElementById("rebote");
+            var mFondo = document.getElementById("mFondo");
+
+            //clases
+            class bloque {
+                constructor(x, y, ancho, alto, color, visibilidad) {
+                    this.x = x;
+                    this.y = y;
+                    this.ancho = ancho;
+                    this.alto = alto;
+                    this.color = color;
+                    this.visibilidad = visibilidad;
+                }
+                //metodo de dibujado de los bloques
+                dibujaBloque() {
+                    contexto.drawImage(this.color, this.x, this.y, this.ancho, this.alto);
+                }
+            }
+
+            class racket extends bloque {
+                constructor(x, y, ancho, alto) {
+                    super(x, y, ancho, alto);
+                    this.velocidad = 0;
+                }
+                //metodo de dibujado de los bloques
+                dibujaRaqueta() {
+                    contexto.drawImage(raquetaImg, this.x, this.y, this.ancho, this.alto);
+                }
+            }
+
+            class map {
+                constructor() {
+
+                    //mapa de colores, dependiendo del numero es un color u otro
+                    this.map = [
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1],
+                        [2, 2, 2, 2, 2, 2, 2, 2, 2],
+                        [3, 3, 3, 3, 3, 3, 3, 3, 3],
+                        [4, 4, 4, 4, 4, 4, 4, 4, 4],
+                        [5, 5, 5, 5, 5, 5, 5, 5, 5]
+                    ];
+
+                    //mapas de bloques, 1 significa que ahí habra un bloque, 0 que 
+                    //no habrá
+                    this.nivel1 = [
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1]
+                    ];
+
+                    this.nivel2 = [
+                        [1, 0, 1, 1, 1, 1, 1, 0, 1],
+                        [1, 0, 1, 1, 1, 1, 1, 0, 1],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1]
+                    ];
+                }
+            }
+
+            class ball {
+                constructor(x, y, ancho, alto) {
+                    this.x = x;
+                    this.y = y;
+                    this.ancho = ancho;
+                    this.alto = alto;
+                    this.velocidadY = 0;
+                    this.velocidadX = 0;
+                }
+                dibujaBola() {
+                    contexto.drawImage(bolaImg, this.x, this.y, this.ancho, this.alto);
+                }
+
+                //metodo de actualizacion de la bola. Si toca los laterales arriba
+                //o la raqueta las velocidades cambian. Además, segun el lado de
+                //la raqueta con el que colisione la bola, su velocidad cambiará 
+                //hacia un sentido u otro. Tambien si colisiona con un bloque o 
+                //lateral suena
+                actualizaBola() {
+                    if (this.y === 10) {
+                        rebote.pause();
+                        rebote.currentTime = 0;
+                        rebote.play();
+                        this.velocidadY *= -1;
+                    }
+
+
+                    if (this.x === 10 || this.x === anchoLienzo - 10 - this.ancho) {
+                        rebote.pause();
+                        rebote.currentTime = 0;
+                        rebote.play();
+                        this.velocidadX *= -1;
+                    }
+
+                    for (var i = 0; i < raqueta.ancho; i++) {
+                        if (this.y === raqueta.y - raqueta.alto && this.x === raqueta.x + i) {
+                            this.velocidadY *= -1;
+                            if (this.x < raqueta.x + (raqueta.ancho) / 2) {
+                                if (this.velocidadX > 0) {
+                                    this.velocidadX *= -1;
+                                }
+
+                            } else if (this.x > raqueta.x + (raqueta.ancho) / 2) {
+                                if (this.velocidadX < 0) {
+                                    this.velocidadX *= -1;
+                                }
+                            }
+                        }
+                    }
+
+                    //la posicion se actualiza sumandole la velocidad
+                    this.y += this.velocidadY;
+                    this.x += this.velocidadX;
+                }
+            }
+
+            //VARIABLES GLOBALES
+
+            var anchoLienzo = lienzo.width;
+            var altoLienzo = lienzo.height;
+            var mapaBloques = new map();
+            var raqueta = new racket(200, 550, 85, 15);
+            var anchoBloques = 50;
+            var altoBloques = 20;
+            var numBloques = 54;
+
+            //array con los colores disponibles para los bloques
+            var bloques = [];
+            var colores = [];
+            colores[0] = bAzul;
+            colores[1] = bMorado;
+            colores[2] = bVerde;
+            colores[3] = bRojo;
+            colores[4] = bAmarillo;
+            colores[5] = bNaranja;
+
+            var bola = new ball(230, 530, 20, 20);
+            var primerClick = false;
+            var lvl = 1;
+            //temporizador que llama al metodo de establecer musica de fondo cada
+            //milisegundo para asegurarnos de que cuando acabe de sonar la musica, 
+            //ésta se reinicie
+            var musicTimer = setInterval(musicaOn, 1);
+
+            //LLAMADAS A FUNCIONES
+
+            start();
+
+            //LLAMADA A EVENTOS DE RATON
+
+            lienzo.addEventListener("mousemove", manejaRaton, false);
+            lienzo.addEventListener("click", manejaRaton, false);
+
+            //FUNCIONES 
+
+            //funcion inicial encargada de llamar a los metodos de creado de 
+            //bloques, de dibujado de los elementos y de iniciar el temporizador
+            //con la funcion de actualizacion de la escena
+            function start() {
+                crearBloques();
+                draw();
+                requestAnimationFrame(update);
+            }
+
+            //funcion de reinicio de nivel que hace resetea los valores de la bola, 
+            //de la raqueta, del primer click y crea los bloques correspondientes
+            //al nivel en el que se encuentre el jugador 
+            function reStart() {
+                primerClick = false;
+                bola.velocidadX = 0;
+                bola.velocidadY = 0;
+                bola.x = 230;
+                bola.y = 530;
+                raqueta.x = 200;
+                crearBloques();
+                musicTimer = setInterval(musicaOn, 1);
+            }
+
+            //funcion de actulizacion que si dependiendo del tamaño del array de
+            //bloques, irá llamando a los metodos de actulizacion de la bola y de 
+            //los bloques y a la funcion de dibujado. Si el array de bloques es 0
+            //cambia de nivel
+            function update() {
+                bola.actualizaBola();
+                if (bloques.length > 0) {
+                    actualizarBloques();
+                }
+                if (bloques.length === 0) {
+                    primerClick = false;
+                    bola.velocidadX = 0;
+                    bola.velocidadY = 0;
+                    bola.x = 230;
+                    bola.y = 530;
+                    raqueta.x = 200;
+                    lvl++;
+                    crearBloques();
+                }
+                draw();
+                if (lvl < 3) {
+                    requestAnimationFrame(update);
+                    //si la bola se va hacia abajo, para los efectos de sonido
+                    if (bola.y + bola.alto >= altoLienzo) {
+                        rebote.pause();
+                        mFondo.pause();
+                        clearInterval(musicTimer);
+                        mFondo.currentTime = 0;
+                    }
+                }
+                if (lvl > 2) {
+                    clearInterval(musicTimer);
+                }
+            }
+
+            //funcion para iniciar la musica de fondo
+            function musicaOn() {
+                mFondo.play();
+            }
+
+            //funcion de dibujado de los elementos que primero limpia el lienzo
+            function draw() {
+                contexto.clearRect(0, 0, anchoLienzo, altoLienzo);
+                contexto.drawImage(fondo, 0, 0, anchoLienzo, altoLienzo);
+                contexto.drawImage(latIzq, 0, 0, 10, altoLienzo);
+                contexto.drawImage(latDrcho, anchoLienzo - 10, 0, 10, altoLienzo);
+                contexto.drawImage(arriba, 0, 0, anchoLienzo, 10);
+                raqueta.dibujaRaqueta();
+                //si el array de bloques no esta vacio, dibuja los que haya
+                if (bloques.length > 0) {
+                    dibujarBloques();
+                }
+                bola.dibujaBola();
+            }
+
+            //funcion de crearcion de bloques 
+            function crearBloques() {
+                var maxX = 460; //ultimo valor de la x del ultimo bloque a crear
+                var incremento = 0; //incremento usado para actualizar el valor de la x 
+                var x = anchoBloques;
+                var y = 100;
+
+                //variables para movernos dentro del array del nivel correspondiente definido en la clase mapa
+                var j = 0;
+                var k = 0;
+
+                //creacion de objetos bloque dentro del array de bloques que tendra 
+                //un tamaño numBloques y cada bloque será de un color dependiendo
+                //del mapa de colores del nivel correspondiente
+                for (var i = 0; i < numBloques; i++) {
+                    if (lvl === 1) {
+                        bloques[i] = new bloque(10 + x * incremento, y, anchoBloques, altoBloques, colores[mapaBloques.map[j][k]], mapaBloques.nivel1[j][k]);
+                    } else if (lvl === 2) {
+                        bloques[i] = new bloque(10 + x * incremento, y, anchoBloques, altoBloques, colores[mapaBloques.map[j][k]], mapaBloques.nivel2[j][k]);
+                    }
+                    incremento++;
+                    k++;
+
+                    //si la posicion del ultimo bloque creado es la maxima, pasamos
+                    // a la siguiente fila actualizando la y, el incremento y la k se resetean
+                    // y la j aumenta pasando asi a la segunda fila en el mapa de colores del nivel 
+                    if (10 + x * incremento === maxX) {
+                        y = y + altoBloques;
+                        incremento = 0;
+                        j++;
+                        k = 0;
+                    }
+                }
+            }
+
+            //funcion de dibujado de los bloques, si el campo de visibilidad es 0
+            //lo que hará será dibujar un bloque de tamapo 0 de alto y 0 de ancho 
+            //en el punto (0,0)
+
+            function dibujarBloques() {
+                for (var i = 0; i < bloques.length; i++) {
+                    if (bloques[i].visibilidad === 0) {
+                        bloques[i].x = 0;
+                        bloques[i].y = 0;
+                        bloques[i].alto = 0;
+                        bloques[i].ancho = 0;
+                    }
+                    bloques[i].dibujaBloque();
+
+                }
+            }
+
+            //funcion de manejo de eventos del raton, si se hace click aporta velocidad 
+            //a la bola (solo si es el primer click) y si se mueve el raton actualiza
+            //la posicion x de la raqueta
+            function manejaRaton(e) {
+                var dimensionesinternas = document.getElementById("lienzo").getBoundingClientRect();
+                var mouseX = e.pageX - dimensionesinternas.left;
+                var minX = 10;
+                var maxX = dimensionesinternas.width - 10;
+                switch (e.type) {
+                    case "mousemove":
+                        if (mouseX > minX && mouseX < maxX - raqueta.ancho && primerClick === true) {
+                            raqueta.x = mouseX;
+                        }
+                        break;
+                    case"click":
+                        if (primerClick === false) {
+                            primerClick = true;
+                            bola.velocidadX = -5;
+                            bola.velocidadY = -5;
+                        }
+                        break;
+
+
+                }
+            }
+
+            //funcion que actualiza el array de bloques si ha habido colision
+            //de alguno con la bola
+            function actualizarBloques() {
+                for (var i = 0; i < bloques.length; i++) {
+                    if (bola.y + bola.alto === bloques[i].y || bola.y === bloques[i].y + altoBloques) { //colision por arriba o por debajo
+                        for (var anch = 0; anch < anchoBloques; anch++) { //calculo de la posicion de la x en el bloque
+                            //si la x de la bola coincide con alguna x del lado largo de los bloques y la y de la bola coincide con la y del lado del bloque con el que colisiona elimina el bloque
+                            if ((checkCol(bloques[i].x + anch, bloques[i].y, bola.x, bola.y + bola.alto) === true) || (checkCol(bloques[i].x + anch, bloques[i].y + altoBloques, bola.x, bola.y) === true)) {
+                                romper.currentTime = 0;
+                                romper.play();
+                                eliminarBloque(i);
+                                break;
+                            }
+                        }
+                    } else {
+                        for (var alt = 0; alt < altoBloques; alt++) { //colision por los laterales
+                            if ((checkCol(bloques[i].x, bloques[i].y + alt, bola.x + bola.ancho, bola.y) === true) || (checkCol(bloques[i].x + anchoBloques, bloques[i].y + alt, bola.x, bola.y) === true)) {
+                                romper.currentTime = 0;
+                                romper.play();
+                                eliminarBloque(i);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            //comprueba si hay colision, es decir si x1 e x2 son iguales y lo
+            //mismo para y1 e y2
+            function checkCol(x1, y1, x2, y2) {
+                if (x1 === x2 && y1 === y2) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+
+            //funcion de eliminado de bloques 
+            function eliminarBloque(i) {
+                // si es el ultimo bloque del array simplemente decrece la longitud de este
+                if (i === bloques.length - 1) {
+                    bloques.length--;
+                }
+                // actualiza el array para eliminar el bloque en cuestion y decrece
+                //el tamaño del array. Además, al eliminar un bloque la velocidad
+                //vertical de la bola cambia
+                else {
+                    for (var j = i; j < bloques.length; j++) {
+                        bloques[j] = bloques[j + 1];
+                    }
+                    bola.velocidadY *= -1;
+                    bloques.length--;
+                }
+            }
+
+
+        </script>
+
+    </body>
+</html>
